@@ -215,6 +215,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- Update Logic ---
+  const btnCheckUpdate = document.getElementById('btn-check-update');
+  const btnInstallUpdate = document.getElementById('btn-install-update');
+  const updateMessage = document.getElementById('update-message');
+  const appVersion = document.getElementById('app-version');
+
+  btnCheckUpdate.addEventListener('click', async () => {
+    btnCheckUpdate.disabled = true;
+    btnCheckUpdate.textContent = 'Controleren...';
+    updateMessage.textContent = 'Bezig met controleren...';
+    updateMessage.className = 'card-desc update-desc';
+
+    const result = await window.api.checkForUpdates();
+
+    btnCheckUpdate.disabled = false;
+    btnCheckUpdate.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Controleer';
+    updateMessage.textContent = result.message;
+
+    if (result.success && !result.upToDate) {
+      btnInstallUpdate.style.display = 'inline-flex';
+      updateMessage.className = 'card-desc update-desc update-available';
+    } else {
+      btnInstallUpdate.style.display = 'none';
+      updateMessage.className = 'card-desc update-desc ' + (result.success ? 'update-ok' : 'update-error');
+    }
+  });
+
+  btnInstallUpdate.addEventListener('click', async () => {
+    btnInstallUpdate.disabled = true;
+    btnInstallUpdate.textContent = 'Installeren...';
+    updateMessage.textContent = 'Update wordt gedownload en geïnstalleerd. Even geduld...';
+    showLoading(true);
+
+    const result = await window.api.installUpdate();
+
+    showLoading(false);
+    updateMessage.textContent = result.message;
+
+    if (result.success) {
+      updateMessage.className = 'card-desc update-desc update-ok';
+      btnInstallUpdate.style.display = 'none';
+      // Auto-restart after 2 seconds
+      setTimeout(() => window.api.restartApp(), 2000);
+    } else {
+      updateMessage.className = 'card-desc update-desc update-error';
+      btnInstallUpdate.disabled = false;
+      btnInstallUpdate.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Update installeren';
+    }
+  });
+
+  // Load version
+  async function loadVersion() {
+    const result = await window.api.getAppVersion();
+    appVersion.textContent = `v${result.version}`;
+  }
+
   // Initial load
   refreshDashboard();
+  loadVersion();
 });

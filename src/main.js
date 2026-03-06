@@ -1,8 +1,11 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 const ProductiviteitDB = require('./database');
 const { parseRapportage, generateProductiviteitExcel } = require('./excel-handler');
+
+const PROJECT_DIR = path.resolve(__dirname, '..');
 
 const DATA_DIR = path.join(app.getPath('userData'), 'productiviteit-data');
 const DB_PATH = path.join(DATA_DIR, 'productiviteit.db');
@@ -188,4 +191,66 @@ ipcMain.handle('show-save-dialog', async (_event, jaar) => {
 ipcMain.handle('drop-file', async (_event, filePaths) => {
   if (!filePaths || filePaths.length === 0) return null;
   return filePaths[0];
+});
+
+ipcMain.handle('get-app-version', async () => {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(PROJECT_DIR, 'package.json'), 'utf8'));
+    return { success: true, version: pkg.version };
+  } catch (err) {
+    return { success: false, version: '?' };
+  }
+});
+
+ipcMain.handle('check-for-updates', async () => {
+  try {
+    const env = { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` };
+    const opts = { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout: 30000 };
+
+    // Fetch latest from remote
+    execSync('git fetch origin main', opts);
+
+    // Check if we're behind
+    const local = execSync('git rev-parse HEAD', opts).trim();
+    const remote = execSync('git rev-parse origin/main', opts).trim();
+
+    if (local === remote) {
+      return { success: true, upToDate: true, message: 'Je hebt de nieuwste versie.' };
+    }
+
+    // Count commits behind
+    const behindCount = execSync('git rev-list HEAD..origin/main --count', opts).trim();
+    return {
+      success: true,
+      upToDate: false,
+      message: `Er is een update beschikbaar (${behindCount} wijziging${behindCount === '1' ? '' : 'en'}).`,
+    };
+  } catch (err) {
+    return { success: false, message: 'Kan niet controleren op updates. Controleer je internetverbinding.' };
+  }
+});
+
+ipcMain.handle('install-update', async () => {
+  try {
+    const env = { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` };
+    const opts = { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout: 120000 };
+
+    // Pull latest
+    execSync('git pull origin main', opts);
+
+    // Install any new dependencies
+    execSync('npm install', opts);
+
+    // Rebuild native modules for Electron
+    execSync('npx electron-rebuild -f -w better-sqlite3 2>/dev/null || true', { ...opts, shell: true });
+
+    return { success: true, message: 'Update geïnstalleerd! De app wordt herstart...' };
+  } catch (err) {
+    return { success: false, message: `Update mislukt: ${err.message}` };
+  }
+});
+
+ipcMain.handle('restart-app', async () => {
+  app.relaunch();
+  app.exit(0);
 });

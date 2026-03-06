@@ -10,4 +10,8 @@ contextBridge.exposeInMainWorld('api', {
   selectFile: () => ipcRenderer.invoke('select-file'),
   showSaveDialog: (jaar) => ipcRenderer.invoke('show-save-dialog', jaar),
   onDropFile: (filePaths) => ipcRenderer.invoke('drop-file', filePaths),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
+  restartApp: () => ipcRenderer.invoke('restart-app'),
 });

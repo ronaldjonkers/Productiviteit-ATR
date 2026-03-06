@@ -440,6 +440,53 @@ tbody tr:hover td {
   color: var(--text-primary);
 }
 
+/* === UPDATE SECTION === */
+.update-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.update-info {
+  flex: 1;
+}
+
+.update-info h2 {
+  margin-bottom: 4px;
+}
+
+.update-desc {
+  margin-bottom: 0;
+}
+
+.update-buttons {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.update-available {
+  color: #f59e0b !important;
+  font-weight: 500;
+}
+
+.update-ok {
+  color: var(--success) !important;
+}
+
+.update-error {
+  color: var(--error) !important;
+}
+
+/* === APP FOOTER === */
+.app-footer {
+  text-align: center;
+  padding: 24px 0 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 /* === LOADING OVERLAY === */
 .loading-overlay {
   position: fixed;
