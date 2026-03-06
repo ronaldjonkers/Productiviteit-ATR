@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Hide macOS titlebar spacer on non-macOS platforms
+  if (window.api.platform !== 'darwin') {
+    const titlebar = document.querySelector('.titlebar');
+    if (titlebar) titlebar.style.display = 'none';
+  }
+
   const dropzone = document.getElementById('dropzone');
   const btnSelectFile = document.getElementById('btn-select-file');
   const uploadStatus = document.getElementById('upload-status');

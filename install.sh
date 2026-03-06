@@ -171,7 +171,7 @@ if [ "$OS" = "Darwin" ]; then
 </plist>
 PLIST
 
-  # Launcher script
+  # Launcher script — build in three parts to inject PROJECT_DIR and ELECTRON_PATH
   cat > "${MACOS}/launcher" << 'LAUNCHEREOF'
 #!/bin/bash
 # Productiviteit ATR - App Launcher
@@ -179,10 +179,20 @@ export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
 
 LAUNCHEREOF
 
-  # Append PROJECT_DIR as a literal (not variable-expanded in heredoc)
+  # Inject PROJECT_DIR and resolved electron binary path
+  ELECTRON_BIN="${PROJECT_DIR}/node_modules/.bin/electron"
   echo "PROJECT_DIR=\"${PROJECT_DIR}\"" >> "${MACOS}/launcher"
+  echo "ELECTRON_BIN=\"${ELECTRON_BIN}\"" >> "${MACOS}/launcher"
+  echo "LOG_FILE=\"\$HOME/Library/Logs/ProductiviteitATR.log\"" >> "${MACOS}/launcher"
 
   cat >> "${MACOS}/launcher" << 'LAUNCHEREOF2'
+
+# Logging
+exec > "${LOG_FILE}" 2>&1
+echo "[$(date)] Starting Productiviteit ATR..."
+echo "PROJECT_DIR=${PROJECT_DIR}"
+echo "ELECTRON_BIN=${ELECTRON_BIN}"
+echo "PATH=${PATH}"
 
 # Check if project exists
 if [ ! -d "${PROJECT_DIR}/node_modules" ]; then
@@ -190,19 +200,17 @@ if [ ! -d "${PROJECT_DIR}/node_modules" ]; then
     exit 1
 fi
 
-# Check node
-if ! command -v node &>/dev/null; then
-    osascript -e 'display dialog "Node.js is niet gevonden op deze computer.\n\nVraag je IT-beheerder om install.sh opnieuw uit te voeren." with title "Productiviteit ATR" buttons {"OK"} default button "OK" with icon caution'
+# Check electron binary
+if [ ! -f "${ELECTRON_BIN}" ]; then
+    osascript -e 'display dialog "Electron is niet gevonden.\n\nVraag je IT-beheerder om install.sh opnieuw uit te voeren." with title "Productiviteit ATR" buttons {"OK"} default button "OK" with icon caution'
     exit 1
 fi
 
 cd "${PROJECT_DIR}"
 
-# Silently rebuild native modules if needed
-npx electron-rebuild -f -w better-sqlite3 2>/dev/null &
-
-# Launch the Electron app
-exec npx electron . 2>/dev/null
+# Launch the Electron app directly (no npx needed)
+echo "[$(date)] Launching electron..."
+exec "${ELECTRON_BIN}" .
 LAUNCHEREOF2
 
   chmod +x "${MACOS}/launcher"

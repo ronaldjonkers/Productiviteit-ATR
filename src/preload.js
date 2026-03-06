@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  platform: process.platform,
   uploadRapportage: (filePath) => ipcRenderer.invoke('upload-rapportage', filePath),
   updateContractUren: (medewerkerId, uren) => ipcRenderer.invoke('update-contract-uren', medewerkerId, uren),
   downloadExcel: (jaar) => ipcRenderer.invoke('download-excel', jaar),

@@ -14,26 +14,45 @@ let mainWindow;
 let db;
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  const isMac = process.platform === 'darwin';
+
+  const winOptions = {
     width: 1100,
     height: 780,
     minWidth: 800,
     minHeight: 600,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 16 },
     backgroundColor: '#0f172a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
-  });
+  };
 
+  if (isMac) {
+    winOptions.titleBarStyle = 'hiddenInset';
+    winOptions.trafficLightPosition = { x: 16, y: 16 };
+  }
+
+  mainWindow = new BrowserWindow(winOptions);
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 
 app.whenReady().then(() => {
-  db = new ProductiviteitDB(DB_PATH);
+  try {
+    db = new ProductiviteitDB(DB_PATH);
+  } catch (err) {
+    dialog.showErrorBox(
+      'Productiviteit ATR - Fout bij opstarten',
+      `De database kon niet worden geladen.\n\n` +
+      `Dit komt waarschijnlijk doordat de native modules niet goed zijn gebouwd.\n\n` +
+      `Oplossing: vraag je IT-beheerder om install.sh (macOS) of install.bat (Windows) opnieuw uit te voeren.\n\n` +
+      `Technisch detail: ${err.message}`
+    );
+    app.quit();
+    return;
+  }
+
   createWindow();
 
   app.on('activate', () => {
