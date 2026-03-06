@@ -36,19 +36,21 @@ case "$OS" in
   *)      log_error "Niet ondersteund OS: $OS"; exit 1 ;;
 esac
 
-# --- 2. Check/Install Homebrew (macOS only) ---
+# --- 2. Check Homebrew (macOS only, niet automatisch installeren) ---
 if [ "$OS" = "Darwin" ]; then
   log_step "Homebrew controleren..."
   if command -v brew &>/dev/null; then
     log_info "Homebrew is al geïnstalleerd."
   else
-    log_warn "Homebrew niet gevonden. Installeren..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    # Add brew to PATH for Apple Silicon Macs
+    # Add brew to PATH for Apple Silicon Macs (al geïnstalleerd maar niet in PATH)
     if [ -f /opt/homebrew/bin/brew ]; then
       eval "$(/opt/homebrew/bin/brew shellenv)"
+      log_info "Homebrew gevonden op /opt/homebrew."
+    elif [ -f /usr/local/bin/brew ]; then
+      log_info "Homebrew gevonden op /usr/local."
+    else
+      log_warn "Homebrew niet gevonden. Wordt alleen geïnstalleerd als Node.js ontbreekt."
     fi
-    log_info "Homebrew geïnstalleerd."
   fi
 fi
 
@@ -60,6 +62,15 @@ MAX_NODE=22
 
 install_node_lts() {
   if [ "$OS" = "Darwin" ]; then
+    # Installeer Homebrew als het er nog niet is (alleen nu nodig)
+    if ! command -v brew &>/dev/null; then
+      log_warn "Homebrew is nodig om Node.js te installeren."
+      log_info "Homebrew installeren (dit kan om je wachtwoord vragen)..."
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      if [ -f /opt/homebrew/bin/brew ]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+      fi
+    fi
     log_info "Node.js v20 LTS installeren via Homebrew..."
     brew install node@20
     brew link --overwrite node@20 2>/dev/null || true
