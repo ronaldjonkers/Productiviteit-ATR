@@ -289,13 +289,32 @@ ipcMain.handle('get-app-version', async () => {
   }
 });
 
+function getExecOpts(timeout = 30000) {
+  const isWin = process.platform === 'win32';
+  const env = isWin
+    ? process.env
+    : { ...process.env, PATH: `/opt/homebrew/opt/node@20/bin:/usr/local/opt/node@20/bin:/opt/homebrew/bin:/usr/local/bin:${process.env.PATH}` };
+  return { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout, shell: true, stdio: 'pipe' };
+}
+
 ipcMain.handle('check-for-updates', async () => {
   try {
-    const isWin = process.platform === 'win32';
-    const env = isWin
-      ? process.env
-      : { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` };
-    const opts = { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout: 30000, shell: isWin };
+    // Check if this is a git repository
+    if (!fs.existsSync(path.join(PROJECT_DIR, '.git'))) {
+      return {
+        success: false,
+        message: 'Automatische updates zijn niet beschikbaar.\n\nDe app is gedownload als ZIP. Vraag je IT-beheerder om het project opnieuw te installeren met:\ngit clone https://github.com/ronaldjonkers/Productiviteit-ATR.git',
+      };
+    }
+
+    const opts = getExecOpts(30000);
+
+    // Check if git is available
+    try {
+      execSync('git --version', opts);
+    } catch (_) {
+      return { success: false, message: 'Git is niet geïnstalleerd. Installeer Git om updates te ontvangen.' };
+    }
 
     // Fetch latest from remote
     execSync('git fetch origin main', opts);
@@ -316,17 +335,17 @@ ipcMain.handle('check-for-updates', async () => {
       message: `Er is een update beschikbaar (${behindCount} wijziging${behindCount === '1' ? '' : 'en'}).`,
     };
   } catch (err) {
-    return { success: false, message: 'Kan niet controleren op updates. Controleer je internetverbinding.' };
+    return { success: false, message: `Kan niet controleren op updates: ${err.message}` };
   }
 });
 
 ipcMain.handle('install-update', async () => {
   try {
-    const isWin = process.platform === 'win32';
-    const env = isWin
-      ? process.env
-      : { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` };
-    const opts = { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout: 120000, shell: isWin };
+    if (!fs.existsSync(path.join(PROJECT_DIR, '.git'))) {
+      return { success: false, message: 'Geen git repository. Herinstalleer de app via git clone.' };
+    }
+
+    const opts = getExecOpts(120000);
 
     // Pull latest
     execSync('git pull origin main', opts);
@@ -334,11 +353,16 @@ ipcMain.handle('install-update', async () => {
     // Install any new dependencies
     execSync('npm install', opts);
 
-    // Rebuild native modules for Electron
-    const rebuildCmd = isWin
-      ? 'npx electron-rebuild -f -w better-sqlite3 2>nul || echo ok'
-      : 'npx electron-rebuild -f -w better-sqlite3 2>/dev/null || true';
-    execSync(rebuildCmd, { ...opts, shell: true });
+    // Rebuild native modules for Electron — try multiple methods
+    try {
+      execSync('npx electron-rebuild -f -w better-sqlite3', opts);
+    } catch (_) {
+      // Fallback: manual rebuild targeting Electron
+      try {
+        const electronPkg = JSON.parse(fs.readFileSync(path.join(PROJECT_DIR, 'node_modules', 'electron', 'package.json'), 'utf8'));
+        execSync(`npm rebuild better-sqlite3 --runtime=electron --target=${electronPkg.version} --disturl=https://electronjs.org/headers`, opts);
+      } catch (_) { /* best effort */ }
+    }
 
     return { success: true, message: 'Update geïnstalleerd! De app wordt herstart...' };
   } catch (err) {

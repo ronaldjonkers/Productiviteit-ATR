@@ -210,16 +210,13 @@ async function generateProductiviteitExcel(db, jaar) {
           result: pct,
         };
 
-        // Conditional color formatting based on percentage
+        // Conditional font color based on percentage
         if (pct < 0.6) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE74C3C' } };
-          cell.font = { color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+          cell.font = { color: { argb: 'FFE74C3C' }, bold: true, size: 11, name: 'Calibri' };
         } else if (pct < 0.8) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF39C12' } };
-          cell.font = { color: { argb: 'FF1A1A1A' }, size: 11, name: 'Calibri' };
+          cell.font = { color: { argb: 'FFE67E22' }, bold: true, size: 11, name: 'Calibri' };
         } else {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF27AE60' } };
-          cell.font = { color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+          cell.font = { color: { argb: 'FF27AE60' }, bold: true, size: 11, name: 'Calibri' };
         }
       }
     }
