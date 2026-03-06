@@ -363,6 +363,49 @@ header h1 {
   letter-spacing: 0.5px;
 }
 
+/* === CONTRACT INPUT === */
+.contract-input {
+  width: 80px;
+  padding: 6px 10px;
+  background: var(--bg-primary);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
+  text-align: center;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.contract-input::-webkit-inner-spin-button,
+.contract-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.contract-input:hover {
+  border-color: var(--border-light);
+}
+
+.contract-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.save-indicator {
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 80px;
+  color: transparent;
+  transition: color 300ms ease;
+}
+
+.save-indicator.saved {
+  color: var(--success);
+}
+
 /* === TABLES === */
 .table-container {
   overflow-x: auto;

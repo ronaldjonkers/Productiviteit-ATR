@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   uploadRapportage: (filePath) => ipcRenderer.invoke('upload-rapportage', filePath),
-  uploadProductiviteit: (filePath) => ipcRenderer.invoke('upload-productiviteit', filePath),
+  updateContractUren: (medewerkerId, uren) => ipcRenderer.invoke('update-contract-uren', medewerkerId, uren),
   downloadExcel: (jaar) => ipcRenderer.invoke('download-excel', jaar),
   getStatus: () => ipcRenderer.invoke('get-status'),
   getAvailableYears: () => ipcRenderer.invoke('get-available-years'),

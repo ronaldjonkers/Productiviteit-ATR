@@ -114,6 +114,12 @@ class ProductiviteitDB {
     ).all().map(r => r.jaar);
   }
 
+  updateContractUren(medewerkerId, uren) {
+    this.db.prepare(
+      'UPDATE medewerkers SET contract_uren = ? WHERE medewerker_id = ?'
+    ).run(uren, medewerkerId);
+  }
+
   clearUrenForYear(jaar) {
     this.db.prepare('DELETE FROM uren_per_week WHERE jaar = ?').run(jaar);
   }

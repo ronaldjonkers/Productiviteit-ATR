@@ -5,7 +5,9 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
+    "pretest": "npm rebuild better-sqlite3 2>/dev/null",
     "test": "jest --forceExit --detectOpenHandles",
+    "prestart": "npx electron-rebuild -f -w better-sqlite3 2>/dev/null || true",
     "build": "electron-builder --mac",
     "clean": "rm -rf dist node_modules"
   },
@@ -19,6 +21,9 @@
   "dependencies": {
     "better-sqlite3": "^11.0.0",
     "exceljs": "^4.4.0"
+  },
+  "jest": {
+    "testMatch": ["**/tests/**/*.js"]
   },
   "build": {
     "appId": "com.atr.productiviteit",

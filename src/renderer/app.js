@@ -1,8 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const dropzone = document.getElementById('dropzone');
   const btnSelectFile = document.getElementById('btn-select-file');
-  const btnTypeRapportage = document.getElementById('btn-type-rapportage');
-  const btnTypeProductiviteit = document.getElementById('btn-type-productiviteit');
   const uploadStatus = document.getElementById('upload-status');
   const statusMessage = document.getElementById('status-message');
   const statusIcon = document.getElementById('status-icon');
@@ -16,21 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const medewerkersSection = document.getElementById('medewerkers-section');
   const historyTbody = document.getElementById('history-tbody');
   const historySection = document.getElementById('history-section');
-
-  let currentType = 'rapportage';
-
-  // --- Upload Type Selection ---
-  btnTypeRapportage.addEventListener('click', () => {
-    currentType = 'rapportage';
-    btnTypeRapportage.classList.add('active');
-    btnTypeProductiviteit.classList.remove('active');
-  });
-
-  btnTypeProductiviteit.addEventListener('click', () => {
-    currentType = 'productiviteit';
-    btnTypeProductiviteit.classList.add('active');
-    btnTypeRapportage.classList.remove('active');
-  });
 
   // --- Drag and Drop ---
   dropzone.addEventListener('dragenter', (e) => {
@@ -92,12 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showLoading(true);
     hideStatus();
 
-    let result;
-    if (currentType === 'rapportage') {
-      result = await window.api.uploadRapportage(filePath);
-    } else {
-      result = await window.api.uploadProductiviteit(filePath);
-    }
+    const result = await window.api.uploadRapportage(filePath);
 
     showLoading(false);
 
@@ -171,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnDownload.disabled = false;
     }
 
-    // Medewerkers table
+    // Medewerkers table with editable contracturen
     if (medewerkers.length > 0) {
       medewerkersSection.style.display = 'block';
       medewerkersTbody.innerHTML = '';
@@ -180,10 +158,39 @@ document.addEventListener('DOMContentLoaded', () => {
         tr.innerHTML = `
           <td>${mw.medewerker_id}</td>
           <td>${mw.naam}</td>
-          <td>${mw.contract_uren}</td>
+          <td>
+            <input type="number" class="contract-input" 
+              value="${mw.contract_uren}" 
+              data-id="${mw.medewerker_id}" 
+              min="0" max="60" step="0.5">
+          </td>
+          <td class="save-indicator" id="save-${mw.medewerker_id}"></td>
         `;
         medewerkersTbody.appendChild(tr);
       }
+
+      // Attach auto-save listeners to all contract inputs
+      document.querySelectorAll('.contract-input').forEach(input => {
+        let saveTimeout;
+        input.addEventListener('input', () => {
+          const id = parseInt(input.dataset.id, 10);
+          const indicator = document.getElementById(`save-${id}`);
+          indicator.textContent = '';
+          indicator.className = 'save-indicator';
+
+          clearTimeout(saveTimeout);
+          saveTimeout = setTimeout(async () => {
+            const value = parseFloat(input.value);
+            if (isNaN(value) || value < 0) return;
+            const result = await window.api.updateContractUren(id, value);
+            if (result.success) {
+              indicator.textContent = 'Opgeslagen';
+              indicator.className = 'save-indicator saved';
+              setTimeout(() => { indicator.textContent = ''; indicator.className = 'save-indicator'; }, 2000);
+            }
+          }, 400);
+        });
+      });
     } else {
       medewerkersSection.style.display = 'none';
     }

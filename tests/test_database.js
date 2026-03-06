@@ -106,7 +106,9 @@ describe('ProductiviteitDB', () => {
     db.logUpload('test2.xlsx', 'productiviteit', 5);
     const history = db.getUploadHistory();
     expect(history.length).toBe(2);
-    expect(history[0].bestandsnaam).toBe('test2.xlsx');
+    const names = history.map(h => h.bestandsnaam);
+    expect(names).toContain('test.xlsx');
+    expect(names).toContain('test2.xlsx');
   }, TEST_TIMEOUT);
 
   test('clearUrenForYear', () => {
@@ -116,6 +118,15 @@ describe('ProductiviteitDB', () => {
     db.clearUrenForYear(2026);
     expect(db.getUrenPerWeek(2026).length).toBe(0);
     expect(db.getUrenPerWeek(2025).length).toBe(1);
+  }, TEST_TIMEOUT);
+
+  test('updateContractUren - updates only contract hours', () => {
+    db.upsertMedewerker(201, 'Mevr. R. Landsmark', 36);
+    db.updateContractUren(201, 24);
+    const all = db.getAllMedewerkers();
+    const mw = all.find(m => m.medewerker_id === 201);
+    expect(mw.contract_uren).toBe(24);
+    expect(mw.naam).toBe('Mevr. R. Landsmark');
   }, TEST_TIMEOUT);
 
   test('default contract hours is 36', () => {

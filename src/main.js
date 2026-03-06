@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const ProductiviteitDB = require('./database');
-const { parseRapportage, parseProductiviteitExcel, generateProductiviteitExcel } = require('./excel-handler');
+const { parseRapportage, generateProductiviteitExcel } = require('./excel-handler');
 
 const DATA_DIR = path.join(app.getPath('userData'), 'productiviteit-data');
 const DB_PATH = path.join(DATA_DIR, 'productiviteit.db');
@@ -65,10 +65,10 @@ ipcMain.handle('upload-rapportage', async (_event, filePath) => {
       db.upsertMedewerker(id, naam, null);
     }
 
-    // Set aggregated uren
+    // Overwrite uren (new upload data is always the truth)
     for (const [key, minuten] of aggregated) {
       const [medewerkerId, jaar, week] = key.split('_').map(Number);
-      db.addUren(medewerkerId, jaar, week, minuten);
+      db.setUren(medewerkerId, jaar, week, minuten);
     }
 
     const fileName = path.basename(filePath);
@@ -88,35 +88,10 @@ ipcMain.handle('upload-rapportage', async (_event, filePath) => {
   }
 });
 
-ipcMain.handle('upload-productiviteit', async (_event, filePath) => {
+ipcMain.handle('update-contract-uren', async (_event, medewerkerId, uren) => {
   try {
-    const updates = await parseProductiviteitExcel(filePath);
-
-    if (updates.length === 0) {
-      return { success: false, error: 'Geen medewerkerdata gevonden in het bestand.' };
-    }
-
-    // Match by name and update contract hours
-    const allMedewerkers = db.getAllMedewerkers();
-    let matched = 0;
-
-    for (const update of updates) {
-      const match = allMedewerkers.find(
-        m => m.naam.toLowerCase().trim() === update.naam.toLowerCase().trim()
-      );
-      if (match) {
-        db.upsertMedewerker(match.medewerker_id, match.naam, update.contractUren);
-        matched++;
-      }
-    }
-
-    const fileName = path.basename(filePath);
-    db.logUpload(fileName, 'productiviteit', updates.length);
-
-    return {
-      success: true,
-      message: `${matched} van ${updates.length} medewerkers bijgewerkt met nieuwe contracturen.`,
-    };
+    db.updateContractUren(medewerkerId, uren);
+    return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
   }
