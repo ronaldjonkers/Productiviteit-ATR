@@ -45,15 +45,17 @@ Dit script:
 ```cmd
 git clone https://github.com/ronaldjonkers/Productiviteit-ATR.git
 cd Productiviteit-ATR
-install.bat
 ```
 
+Dubbelklik vervolgens op **`install.bat`** in de projectmap (of draai `install.bat` vanuit CMD).
+
 Dit script:
-- Controleert of Node.js en Git geïnstalleerd zijn
+- Start automatisch het PowerShell installatiescript (`install.ps1`)
+- Controleert of Node.js en Git geïnstalleerd zijn (opent download-pagina indien nodig)
 - Installeert alle dependencies
 - Maakt een **snelkoppeling op het bureaublad**
 - Maakt een **Start Menu snelkoppeling**
-- Maakt een `Productiviteit ATR.bat` launcher in de projectmap
+- Maakt een `Productiviteit ATR.cmd` launcher in de projectmap
 
 ### Testen
 
