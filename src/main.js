@@ -299,10 +299,14 @@ function getExecOpts(timeout = 30000) {
 
 ipcMain.handle('check-for-updates', async () => {
   try {
+    const localPkg = JSON.parse(fs.readFileSync(path.join(PROJECT_DIR, 'package.json'), 'utf8'));
+    const localVersion = localPkg.version;
+
     // Check if this is a git repository
     if (!fs.existsSync(path.join(PROJECT_DIR, '.git'))) {
       return {
         success: false,
+        localVersion,
         message: 'Automatische updates zijn niet beschikbaar.\n\nDe app is gedownload als ZIP. Vraag je IT-beheerder om het project opnieuw te installeren met:\ngit clone https://github.com/ronaldjonkers/Productiviteit-ATR.git',
       };
     }
@@ -313,26 +317,45 @@ ipcMain.handle('check-for-updates', async () => {
     try {
       execSync('git --version', opts);
     } catch (_) {
-      return { success: false, message: 'Git is niet geïnstalleerd. Installeer Git om updates te ontvangen.' };
+      return { success: false, localVersion, message: 'Git is niet geïnstalleerd. Installeer Git om updates te ontvangen.' };
     }
 
     // Fetch latest from remote
     execSync('git fetch origin main', opts);
 
-    // Check if we're behind
-    const local = execSync('git rev-parse HEAD', opts).trim();
-    const remote = execSync('git rev-parse origin/main', opts).trim();
-
-    if (local === remote) {
-      return { success: true, upToDate: true, message: 'Je hebt de nieuwste versie.' };
+    // Get remote package.json version
+    let remoteVersion;
+    try {
+      const remotePkgJson = execSync('git show origin/main:package.json', opts).trim();
+      const remotePkg = JSON.parse(remotePkgJson);
+      remoteVersion = remotePkg.version;
+    } catch (_) {
+      return { success: false, localVersion, message: 'Kan remote versie niet ophalen.' };
     }
 
-    // Count commits behind
-    const behindCount = execSync('git rev-list HEAD..origin/main --count', opts).trim();
+    // Compare versions
+    const localParts = localVersion.split('.').map(Number);
+    const remoteParts = remoteVersion.split('.').map(Number);
+    const isNewer = remoteParts[0] > localParts[0]
+      || (remoteParts[0] === localParts[0] && remoteParts[1] > localParts[1])
+      || (remoteParts[0] === localParts[0] && remoteParts[1] === localParts[1] && remoteParts[2] > localParts[2]);
+
+    if (!isNewer) {
+      return {
+        success: true,
+        upToDate: true,
+        localVersion,
+        remoteVersion,
+        message: `Je hebt de nieuwste versie (v${localVersion}).`,
+      };
+    }
+
     return {
       success: true,
       upToDate: false,
-      message: `Er is een update beschikbaar (${behindCount} wijziging${behindCount === '1' ? '' : 'en'}).`,
+      localVersion,
+      remoteVersion,
+      message: `Update beschikbaar: v${localVersion} → v${remoteVersion}`,
     };
   } catch (err) {
     return { success: false, message: `Kan niet controleren op updates: ${err.message}` };

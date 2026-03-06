@@ -239,6 +239,11 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCheckUpdate.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Controleer';
     updateMessage.textContent = result.message;
 
+    // Update footer version if returned
+    if (result.localVersion) {
+      appVersion.textContent = `v${result.localVersion}`;
+    }
+
     if (result.success && !result.upToDate) {
       btnInstallUpdate.style.display = 'inline-flex';
       updateMessage.className = 'card-desc update-desc update-available';
