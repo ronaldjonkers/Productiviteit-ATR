@@ -203,16 +203,24 @@ async function generateProductiviteitExcel(db, jaar) {
       const minuten = weekData.get(w) || 0;
 
       if (minuten > 0) {
-        // Put the hours as a formula comment so user can trace
-        // Formula: (minutes/60) / contracturen_cell
-        // Contract uren is in column C of same row
         const contractCellRef = `$C$${rowNum}`;
-        // We write the minutes/60 as a number divided by contract hours
-        // Using formula: =(value/60)/C{row}
+        const pct = minuten / 60 / mw.contract_uren;
         cell.value = {
           formula: `(${minuten}/60)/${contractCellRef}`,
-          result: minuten / 60 / mw.contract_uren,
+          result: pct,
         };
+
+        // Conditional color formatting based on percentage
+        if (pct < 0.6) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE74C3C' } };
+          cell.font = { color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+        } else if (pct < 0.8) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF39C12' } };
+          cell.font = { color: { argb: 'FF1A1A1A' }, size: 11, name: 'Calibri' };
+        } else {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF27AE60' } };
+          cell.font = { color: { argb: 'FFFFFFFF' }, size: 11, name: 'Calibri' };
+        }
       }
     }
   }
