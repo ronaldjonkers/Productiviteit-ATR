@@ -106,7 +106,7 @@ async function generateProductiviteitExcel(db, jaar) {
   workbook.created = new Date();
 
   const sheet = workbook.addWorksheet('Productiviteit', {
-    views: [{ state: 'frozen', xSplit: 2, ySplit: 1 }],
+    views: [{ state: 'frozen', xSplit: 3, ySplit: 1 }],
   });
 
   // --- STYLES ---
@@ -219,7 +219,7 @@ async function generateProductiviteitExcel(db, jaar) {
 
   // Add a "Uren" sheet with raw hours for reference
   const urenSheet = workbook.addWorksheet('Uren (detail)', {
-    views: [{ state: 'frozen', xSplit: 2, ySplit: 1 }],
+    views: [{ state: 'frozen', xSplit: 3, ySplit: 1 }],
   });
 
   const urenHeaders = ['Medewerker', 'Medewerker ID', 'Contracturen'];
