@@ -23,7 +23,7 @@ Klik in de app onderaan op **"Controleer"** bij "App Updates". Als er een update
 
 ## Voor IT-beheerders
 
-### Installatie (eenmalig)
+### Installatie macOS (eenmalig)
 
 ```bash
 git clone git@github.com:ronaldjonkers/Productiviteit-ATR.git
@@ -38,13 +38,30 @@ Dit script:
 - Plaatst een **snelkoppeling op het bureaublad**
 - Verwijdert macOS quarantine zodat de app direct werkt
 
+### Installatie Windows (eenmalig)
+
+**Vereisten:** Installeer eerst [Node.js LTS](https://nodejs.org/) en [Git](https://git-scm.com/download/win) met standaard instellingen.
+
+```cmd
+git clone https://github.com/ronaldjonkers/Productiviteit-ATR.git
+cd Productiviteit-ATR
+install.bat
+```
+
+Dit script:
+- Controleert of Node.js en Git geïnstalleerd zijn
+- Installeert alle dependencies
+- Maakt een **snelkoppeling op het bureaublad**
+- Maakt een **Start Menu snelkoppeling**
+- Maakt een `Productiviteit ATR.bat` launcher in de projectmap
+
 ### Testen
 
 ```bash
 npm test
 ```
 
-### Handmatig starten (via Terminal)
+### Handmatig starten (via Terminal/CMD)
 
 ```bash
 npm start
@@ -59,6 +76,7 @@ npm start
 - **Drag & drop**: Sleep bestanden direct in de applicatie
 - **In-app updates**: Eén klik om de nieuwste versie te installeren
 - **macOS .app**: Dubbelklik om te starten, sleep naar Dock
+- **Windows**: Snelkoppeling op bureaublad en in Start Menu
 
 ## Excel Output
 

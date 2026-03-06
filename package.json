@@ -5,11 +5,12 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "pretest": "npm rebuild better-sqlite3 2>/dev/null",
+    "pretest": "node -e \"try{require('child_process').execSync('npm rebuild better-sqlite3',{stdio:'ignore'})}catch(e){}\"",
     "test": "jest --forceExit --detectOpenHandles",
-    "prestart": "npx electron-rebuild -f -w better-sqlite3 2>/dev/null || true",
-    "build": "electron-builder --mac",
-    "clean": "rm -rf dist node_modules"
+    "prestart": "node -e \"try{require('child_process').execSync('npx electron-rebuild -f -w better-sqlite3',{stdio:'ignore'})}catch(e){}\"",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win"
   },
   "author": "",
   "license": "ISC",
@@ -31,6 +32,9 @@
     "mac": {
       "target": "dmg",
       "category": "public.app-category.business"
+    },
+    "win": {
+      "target": "nsis"
     },
     "files": [
       "src/**/*",

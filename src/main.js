@@ -204,8 +204,11 @@ ipcMain.handle('get-app-version', async () => {
 
 ipcMain.handle('check-for-updates', async () => {
   try {
-    const env = { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` };
-    const opts = { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout: 30000 };
+    const isWin = process.platform === 'win32';
+    const env = isWin
+      ? process.env
+      : { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` };
+    const opts = { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout: 30000, shell: isWin };
 
     // Fetch latest from remote
     execSync('git fetch origin main', opts);
@@ -232,8 +235,11 @@ ipcMain.handle('check-for-updates', async () => {
 
 ipcMain.handle('install-update', async () => {
   try {
-    const env = { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` };
-    const opts = { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout: 120000 };
+    const isWin = process.platform === 'win32';
+    const env = isWin
+      ? process.env
+      : { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` };
+    const opts = { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout: 120000, shell: isWin };
 
     // Pull latest
     execSync('git pull origin main', opts);
@@ -242,7 +248,10 @@ ipcMain.handle('install-update', async () => {
     execSync('npm install', opts);
 
     // Rebuild native modules for Electron
-    execSync('npx electron-rebuild -f -w better-sqlite3 2>/dev/null || true', { ...opts, shell: true });
+    const rebuildCmd = isWin
+      ? 'npx electron-rebuild -f -w better-sqlite3 2>nul || echo ok'
+      : 'npx electron-rebuild -f -w better-sqlite3 2>/dev/null || true';
+    execSync(rebuildCmd, { ...opts, shell: true });
 
     return { success: true, message: 'Update geïnstalleerd! De app wordt herstart...' };
   } catch (err) {
