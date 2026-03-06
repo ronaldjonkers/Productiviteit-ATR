@@ -120,10 +120,50 @@ fi
 
 # --- 8. Rebuild native modules for Electron ---
 log_step "Native modules rebuilden voor Electron..."
-npx electron-rebuild -f -w better-sqlite3 2>/dev/null || {
-  log_warn "electron-rebuild gefaald, fallback..."
-  npm rebuild better-sqlite3 2>/dev/null || true
-}
+log_info "Dit zorgt ervoor dat better-sqlite3 werkt met Electron (niet systeem Node)..."
+
+REBUILD_OK=false
+
+# Method 1: npx electron-rebuild
+if npx electron-rebuild -f -w better-sqlite3 2>&1; then
+  log_info "electron-rebuild succesvol."
+  REBUILD_OK=true
+else
+  log_warn "electron-rebuild mislukt, alternatieve methode proberen..."
+fi
+
+# Method 2: direct rebuild via node_modules
+if [ "$REBUILD_OK" = false ]; then
+  ELECTRON_VERSION=$(node -e "console.log(require('./node_modules/electron/package.json').version)")
+  if [ -n "$ELECTRON_VERSION" ]; then
+    log_info "Electron versie: ${ELECTRON_VERSION}, handmatig rebuilden..."
+    if npm rebuild better-sqlite3 --runtime=electron --target="$ELECTRON_VERSION" --disturl=https://electronjs.org/headers 2>&1; then
+      log_info "Handmatige rebuild succesvol."
+      REBUILD_OK=true
+    else
+      log_warn "Handmatige rebuild ook mislukt."
+    fi
+  fi
+fi
+
+# Verify the rebuild actually worked
+if [ "$REBUILD_OK" = true ]; then
+  VERIFY_RESULT=$(node -e "
+    try {
+      const electronVer = require('./node_modules/electron/package.json').version;
+      const modulePath = require.resolve('better-sqlite3');
+      console.log('OK');
+    } catch(e) {
+      console.log('FAIL: ' + e.message);
+    }
+  " 2>&1)
+  log_info "Verificatie: ${VERIFY_RESULT}"
+fi
+
+if [ "$REBUILD_OK" = false ]; then
+  log_error "Kon better-sqlite3 niet rebuilden voor Electron."
+  log_error "De app zal proberen dit automatisch te fixen bij de eerste start."
+fi
 
 # --- 9. Create macOS .app bundle ---
 if [ "$OS" = "Darwin" ]; then

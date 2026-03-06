@@ -2,8 +2,13 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
-const ProductiviteitDB = require('./database');
-const { parseRapportage, generateProductiviteitExcel } = require('./excel-handler');
+let ProductiviteitDB;
+let parseRapportage, generateProductiviteitExcel;
+
+function loadNativeModules() {
+  ProductiviteitDB = require('./database');
+  ({ parseRapportage, generateProductiviteitExcel } = require('./excel-handler'));
+}
 
 const PROJECT_DIR = path.resolve(__dirname, '..');
 
@@ -38,16 +43,79 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 
-app.whenReady().then(() => {
+function tryRebuildNativeModules() {
+  const isWin = process.platform === 'win32';
+  const env = isWin
+    ? process.env
+    : { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}` };
+  const opts = { cwd: PROJECT_DIR, encoding: 'utf8', env, timeout: 120000, shell: true, stdio: 'pipe' };
+
+  // Try electron-rebuild first
   try {
+    execSync('npx electron-rebuild -f -w better-sqlite3', opts);
+    return true;
+  } catch (_) { /* fall through */ }
+
+  // Try manual rebuild with electron target
+  try {
+    const electronPkg = JSON.parse(fs.readFileSync(path.join(PROJECT_DIR, 'node_modules', 'electron', 'package.json'), 'utf8'));
+    const electronVersion = electronPkg.version;
+    const cmd = `npm rebuild better-sqlite3 --runtime=electron --target=${electronVersion} --disturl=https://electronjs.org/headers`;
+    execSync(cmd, opts);
+    return true;
+  } catch (_) { /* fall through */ }
+
+  return false;
+}
+
+app.whenReady().then(() => {
+  // First attempt: load modules normally
+  let loadError = null;
+  try {
+    loadNativeModules();
     db = new ProductiviteitDB(DB_PATH);
   } catch (err) {
+    loadError = err;
+  }
+
+  // If failed due to NODE_MODULE_VERSION mismatch, auto-rebuild
+  if (loadError && loadError.message && loadError.message.includes('NODE_MODULE_VERSION')) {
+    const rebuildResult = dialog.showMessageBoxSync({
+      type: 'info',
+      title: 'Productiviteit ATR',
+      message: 'Eerste keer opstarten — native modules worden gebouwd voor deze computer.\n\nDit duurt 1-2 minuten. Klik OK om door te gaan.',
+      buttons: ['OK', 'Annuleren'],
+      defaultId: 0,
+    });
+
+    if (rebuildResult === 0) {
+      const rebuilt = tryRebuildNativeModules();
+      if (rebuilt) {
+        // Clear module cache and retry
+        delete require.cache[require.resolve('better-sqlite3')];
+        Object.keys(require.cache).forEach(key => {
+          if (key.includes('better-sqlite3') || key.includes('database')) {
+            delete require.cache[key];
+          }
+        });
+
+        try {
+          loadNativeModules();
+          db = new ProductiviteitDB(DB_PATH);
+          loadError = null;
+        } catch (retryErr) {
+          loadError = retryErr;
+        }
+      }
+    }
+  }
+
+  if (loadError) {
     dialog.showErrorBox(
       'Productiviteit ATR - Fout bij opstarten',
       `De database kon niet worden geladen.\n\n` +
-      `Dit komt waarschijnlijk doordat de native modules niet goed zijn gebouwd.\n\n` +
       `Oplossing: vraag je IT-beheerder om install.sh (macOS) of install.bat (Windows) opnieuw uit te voeren.\n\n` +
-      `Technisch detail: ${err.message}`
+      `Technisch detail: ${loadError.message}`
     );
     app.quit();
     return;

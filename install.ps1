@@ -115,16 +115,43 @@ Write-Host "[OK] Alle dependencies geinstalleerd." -ForegroundColor Green
 # --- 6. Rebuild native modules for Electron ---
 Write-Host ""
 Write-Host "[STAP 6] Native modules rebuilden voor Electron..." -ForegroundColor Yellow
+Write-Host "Dit zorgt ervoor dat better-sqlite3 werkt met Electron (niet systeem Node)..." -ForegroundColor Gray
 
+$rebuildOk = $false
+
+# Method 1: npx electron-rebuild
 try {
     & npx electron-rebuild -f -w better-sqlite3 2>&1 | Out-Host
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[OK] electron-rebuild succesvol." -ForegroundColor Green
+        $rebuildOk = $true
+    }
 }
 catch {
-    Write-Host "[WAARSCHUWING] electron-rebuild gefaald, fallback..." -ForegroundColor DarkYellow
-    try { & npm rebuild better-sqlite3 2>&1 | Out-Host } catch {}
+    Write-Host "[WAARSCHUWING] electron-rebuild mislukt, alternatieve methode..." -ForegroundColor DarkYellow
 }
 
-Write-Host "[OK] Native modules gebouwd." -ForegroundColor Green
+# Method 2: manual rebuild with electron target
+if (-not $rebuildOk) {
+    try {
+        $electronVersion = node -e "console.log(require('./node_modules/electron/package.json').version)"
+        if ($electronVersion) {
+            Write-Host "Electron versie: $electronVersion, handmatig rebuilden..." -ForegroundColor Gray
+            & npm rebuild better-sqlite3 --runtime=electron "--target=$electronVersion" --disturl=https://electronjs.org/headers 2>&1 | Out-Host
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "[OK] Handmatige rebuild succesvol." -ForegroundColor Green
+                $rebuildOk = $true
+            }
+        }
+    }
+    catch {
+        Write-Host "[WAARSCHUWING] Handmatige rebuild ook mislukt." -ForegroundColor DarkYellow
+    }
+}
+
+if (-not $rebuildOk) {
+    Write-Host "[WAARSCHUWING] Kon native modules niet rebuilden. De app zal dit automatisch proberen bij eerste start." -ForegroundColor DarkYellow
+}
 
 # --- 7. Create launcher .cmd file ---
 Write-Host ""
