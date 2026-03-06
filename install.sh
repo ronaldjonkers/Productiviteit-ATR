@@ -54,30 +54,62 @@ fi
 
 # --- 3. Check/Install Node.js ---
 log_step "Node.js controleren..."
-REQUIRED_NODE_MAJOR=18
+# Node.js v18-v22 LTS is vereist. Nieuwere versies (v23+) breken electron-rebuild en ExcelJS.
+MIN_NODE=18
+MAX_NODE=22
 
-if command -v node &>/dev/null; then
-  NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
-  if [ "$NODE_VERSION" -ge "$REQUIRED_NODE_MAJOR" ]; then
-    log_info "Node.js $(node -v) gevonden (vereist: >= v${REQUIRED_NODE_MAJOR})."
-  else
-    log_warn "Node.js $(node -v) is te oud. Upgraden naar v${REQUIRED_NODE_MAJOR}+..."
-    if [ "$OS" = "Darwin" ]; then
-      brew install node
-    else
-      curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-      sudo apt-get install -y nodejs
-    fi
-  fi
-else
-  log_warn "Node.js niet gevonden. Installeren..."
+install_node_lts() {
   if [ "$OS" = "Darwin" ]; then
-    brew install node
+    log_info "Node.js v20 LTS installeren via Homebrew..."
+    brew install node@20
+    brew link --overwrite node@20 2>/dev/null || true
+    # Ensure Homebrew node@20 is in PATH
+    if [ -d "/opt/homebrew/opt/node@20/bin" ]; then
+      export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
+    elif [ -d "/usr/local/opt/node@20/bin" ]; then
+      export PATH="/usr/local/opt/node@20/bin:$PATH"
+    fi
   else
     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
     sudo apt-get install -y nodejs
   fi
-  log_info "Node.js $(node -v) geïnstalleerd."
+}
+
+NEED_INSTALL=false
+
+if command -v node &>/dev/null; then
+  NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
+  if [ "$NODE_VERSION" -ge "$MIN_NODE" ] && [ "$NODE_VERSION" -le "$MAX_NODE" ]; then
+    log_info "Node.js $(node -v) gevonden (compatibel: v${MIN_NODE}-v${MAX_NODE})."
+  elif [ "$NODE_VERSION" -gt "$MAX_NODE" ]; then
+    log_warn "Node.js $(node -v) is te nieuw! Versies boven v${MAX_NODE} zijn niet compatibel."
+    log_warn "Node.js v20 LTS wordt geïnstalleerd (je bestaande versie blijft beschikbaar)."
+    NEED_INSTALL=true
+  else
+    log_warn "Node.js $(node -v) is te oud. Versie ${MIN_NODE}-${MAX_NODE} is vereist."
+    NEED_INSTALL=true
+  fi
+else
+  log_warn "Node.js niet gevonden."
+  NEED_INSTALL=true
+fi
+
+if [ "$NEED_INSTALL" = true ]; then
+  install_node_lts
+  # Verify
+  if command -v node &>/dev/null; then
+    NEW_VER=$(node -v | sed 's/v//' | cut -d. -f1)
+    if [ "$NEW_VER" -ge "$MIN_NODE" ] && [ "$NEW_VER" -le "$MAX_NODE" ]; then
+      log_info "Node.js $(node -v) succesvol geïnstalleerd."
+    else
+      log_error "Node.js installatie mislukt of verkeerde versie. Huidige versie: $(node -v)"
+      log_error "Installeer handmatig Node.js v20 LTS van https://nodejs.org/"
+      exit 1
+    fi
+  else
+    log_error "Node.js kon niet worden gevonden na installatie."
+    exit 1
+  fi
 fi
 
 # --- 4. Check npm ---
@@ -106,6 +138,14 @@ fi
 # --- 6. Install npm dependencies ---
 log_step "Node.js dependencies installeren..."
 cd "$PROJECT_DIR"
+
+# If node version was changed, clean node_modules to avoid binary mismatches
+if [ "$NEED_INSTALL" = true ] && [ -d "node_modules" ]; then
+  log_info "Node.js versie is gewijzigd — node_modules opnieuw installeren..."
+  rm -rf node_modules package-lock.json
+fi
+
+log_info "Actieve Node.js: $(node -v) / npm: $(npm -v)"
 npm install
 
 # --- 7. Verify installation ---
@@ -215,7 +255,8 @@ PLIST
   cat > "${MACOS}/launcher" << 'LAUNCHEREOF'
 #!/bin/bash
 # Productiviteit ATR - App Launcher
-export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
+# Include node@20 LTS paths (Homebrew) before system node
+export PATH="/opt/homebrew/opt/node@20/bin:/usr/local/opt/node@20/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 LAUNCHEREOF
 

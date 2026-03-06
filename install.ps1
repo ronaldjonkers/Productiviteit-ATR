@@ -34,15 +34,24 @@ if (-not $nodeExists) {
 }
 
 $nodeVersion = (node -v) -replace 'v','' -split '\.' | Select-Object -First 1
-if ([int]$nodeVersion -lt 18) {
-    Write-Host "[FOUT] Node.js v$nodeVersion is te oud. Versie 18+ is vereist." -ForegroundColor Red
-    Write-Host "Download de nieuwste LTS versie van: https://nodejs.org/" -ForegroundColor White
-    Start-Process "https://nodejs.org/"
+$nodeMajor = [int]$nodeVersion
+
+if ($nodeMajor -lt 18 -or $nodeMajor -gt 22) {
+    if ($nodeMajor -gt 22) {
+        Write-Host "[FOUT] Node.js v$nodeMajor is te nieuw! Versies boven v22 zijn niet compatibel." -ForegroundColor Red
+    } else {
+        Write-Host "[FOUT] Node.js v$nodeMajor is te oud. Versie 18-22 is vereist." -ForegroundColor Red
+    }
+    Write-Host ""
+    Write-Host "Download Node.js v20 LTS van: https://nodejs.org/download/release/latest-v20.x/" -ForegroundColor White
+    Write-Host "Installeer met standaard instellingen en draai dit script opnieuw." -ForegroundColor White
+    Write-Host ""
+    Start-Process "https://nodejs.org/download/release/latest-v20.x/"
     Read-Host "Druk op Enter om af te sluiten"
     exit 1
 }
 
-Write-Host "[OK] Node.js $(node -v) gevonden." -ForegroundColor Green
+Write-Host "[OK] Node.js $(node -v) gevonden (compatibel: v18-v22)." -ForegroundColor Green
 
 # --- 2. Check npm ---
 Write-Host "[STAP 2] npm controleren..." -ForegroundColor Yellow
